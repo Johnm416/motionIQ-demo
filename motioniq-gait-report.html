@@ -1,0 +1,243 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>MotionIQ — Joint Angle Report</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Arial, sans-serif; background: #f4f6f9; color: #1a1a2e; min-height: 100vh; padding: 2rem 1rem; }
+  .container { max-width: 1100px; margin: 0 auto; }
+
+  /* Header */
+  .header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 2rem; padding-bottom: 1rem; border-bottom: 3px solid #00B4D8; }
+  .logo { font-size: 28px; font-weight: 700; color: #1A3C5E; letter-spacing: -0.5px; }
+  .logo span { color: #00B4D8; }
+  .header-badges { display: flex; gap: 8px; }
+  .badge { font-size: 11px; background: #E8F4F8; color: #1A3C5E; border-radius: 4px; padding: 4px 10px; font-weight: 600; border: 1px solid #B5D4F4; }
+
+  /* Meta cards */
+  .meta-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-bottom: 2rem; }
+  .meta-card { background: #fff; border-radius: 10px; padding: 1rem; border: 1px solid #e0e8f0; }
+  .meta-label { font-size: 11px; color: #888; margin-bottom: 4px; text-transform: uppercase; letter-spacing: 0.5px; }
+  .meta-val { font-size: 15px; font-weight: 600; color: #1A3C5E; }
+
+  /* Section titles */
+  .section-title { font-size: 12px; font-weight: 600; color: #888; text-transform: uppercase; letter-spacing: 0.8px; margin-bottom: 1rem; }
+
+  /* Risk cards */
+  .risk-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin-bottom: 2rem; }
+  .risk-card { border-radius: 10px; padding: 1rem 1.25rem; border: 1px solid transparent; }
+  .risk-joint { font-size: 15px; font-weight: 600; color: #1A3C5E; }
+  .risk-label { font-size: 13px; font-weight: 600; margin-top: 6px; }
+  .risk-note { font-size: 12px; color: #666; margin-top: 3px; }
+  .risk-low { background: #EAF3DE; border-color: #C0DD97; }
+  .risk-low .risk-label { color: #3B6D11; }
+  .risk-med { background: #FAEEDA; border-color: #FAC775; }
+  .risk-med .risk-label { color: #854F0B; }
+  .risk-high { background: #FCEBEB; border-color: #F7C1C1; }
+  .risk-high .risk-label { color: #A32D2D; }
+
+  /* Toggle buttons */
+  .toggle-row { display: flex; gap: 8px; margin-bottom: 1.25rem; }
+  .tog-btn { font-size: 12px; padding: 6px 16px; border-radius: 20px; border: 1px solid #ccc; background: #fff; color: #666; cursor: pointer; transition: all 0.15s; font-weight: 500; }
+  .tog-btn:hover { border-color: #1A3C5E; color: #1A3C5E; }
+  .tog-btn.active { background: #1A3C5E; color: #fff; border-color: #1A3C5E; }
+
+  /* Chart cards */
+  .chart-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; margin-bottom: 2rem; }
+  .chart-card { background: #fff; border-radius: 12px; padding: 1.25rem; border: 1px solid #e0e8f0; }
+  .chart-title { font-size: 15px; font-weight: 600; color: #1A3C5E; margin-bottom: 2px; }
+  .chart-sub { font-size: 12px; color: #888; margin-bottom: 1rem; }
+  .chart-wrap { position: relative; height: 200px; }
+  .legend { display: flex; gap: 14px; margin-top: 10px; flex-wrap: wrap; }
+  .leg-item { display: flex; align-items: center; gap: 5px; font-size: 11px; color: #666; }
+  .leg-line { width: 22px; height: 3px; border-radius: 2px; }
+
+  /* Stats grid */
+  .stats-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; margin-bottom: 2rem; }
+  .stat-card { background: #fff; border-radius: 12px; padding: 1.25rem; border: 1px solid #e0e8f0; }
+  .stat-title { font-size: 14px; font-weight: 600; color: #1A3C5E; margin-bottom: 1rem; padding-bottom: 0.5rem; border-bottom: 2px solid #00B4D8; }
+  .stat-row { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+  .stat-box { background: #f4f6f9; border-radius: 8px; padding: 0.6rem; text-align: center; }
+  .stat-box-label { font-size: 10px; color: #888; margin-bottom: 2px; }
+  .stat-box-val { font-size: 18px; font-weight: 700; color: #1A3C5E; }
+  .stat-box-side { font-size: 10px; color: #888; }
+
+  /* Footer */
+  .footer { font-size: 11px; color: #aaa; padding-top: 1rem; border-top: 1px solid #e0e8f0; line-height: 1.6; }
+
+  @media (max-width: 700px) {
+    .meta-grid { grid-template-columns: repeat(2, 1fr); }
+    .risk-grid, .chart-grid, .stats-grid { grid-template-columns: 1fr; }
+    .header { flex-direction: column; align-items: flex-start; gap: 10px; }
+  }
+</style>
+</head>
+<body>
+<div class="container">
+
+  <div class="header">
+    <div class="logo">Motion<span>IQ</span></div>
+    <div class="header-badges">
+      <span class="badge">HCPC Registered</span>
+      <span class="badge">MSc Biomechanics</span>
+      <span class="badge">Gait Analysis</span>
+    </div>
+  </div>
+
+  <div class="meta-grid">
+    <div class="meta-card"><div class="meta-label">Client</div><div class="meta-val">Sample Patient</div></div>
+    <div class="meta-card"><div class="meta-label">Date</div><div class="meta-val" id="reportDate"></div></div>
+    <div class="meta-card"><div class="meta-label">Assessor</div><div class="meta-val">J. [Surname] MSc</div></div>
+    <div class="meta-card"><div class="meta-label">Method</div><div class="meta-val">Pose Estimation</div></div>
+  </div>
+
+  <div class="section-title">Risk summary</div>
+  <div class="risk-grid" id="riskGrid"></div>
+
+  <div class="section-title">Joint angle curves — gait cycle</div>
+  <div class="toggle-row">
+    <button class="tog-btn active" onclick="setView('both')">Both sides</button>
+    <button class="tog-btn" onclick="setView('left')">Left only</button>
+    <button class="tog-btn" onclick="setView('right')">Right only</button>
+  </div>
+  <div class="chart-grid" id="chartGrid"></div>
+
+  <div class="section-title">Peak angle summary</div>
+  <div class="stats-grid" id="statsGrid"></div>
+
+  <div class="footer">
+    Normative reference bands based on published adult gait data (Winter, 2009). This report is generated by MotionIQ pose estimation and should be interpreted by a qualified clinician. Not a substitute for full 3D motion capture lab analysis. &nbsp;|&nbsp; MotionIQ &nbsp;|&nbsp; Liverpool, UK &nbsp;|&nbsp; HCPC Registered Physiotherapist
+  </div>
+
+</div>
+
+<script>
+document.getElementById('reportDate').textContent = new Date().toLocaleDateString('en-GB',{day:'numeric',month:'short',year:'numeric'});
+
+const gc = Array.from({length:101},(_,i)=>i);
+
+const joints = [
+  {
+    id:'hip', label:'Hip', plane:'Sagittal plane',
+    norm:{ max: gc.map(x=>{ let t=x/100; return Math.round((-10+30*Math.sin(2*Math.PI*t+0.3)+8)*10)/10; }),
+           min: gc.map(x=>{ let t=x/100; return Math.round((-10+30*Math.sin(2*Math.PI*t+0.3)-4)*10)/10; }) },
+    left:  gc.map(x=>{ let t=x/100; return Math.round((-8+32*Math.sin(2*Math.PI*t+0.25)-2)*10)/10; }),
+    right: gc.map(x=>{ let t=x/100; return Math.round((-12+28*Math.sin(2*Math.PI*t+0.35)+1)*10)/10; }),
+    risk:'low', riskNote:'Within normal limits'
+  },
+  {
+    id:'knee', label:'Knee', plane:'Sagittal plane',
+    norm:{ max: gc.map(x=>{ let t=x/100; return Math.round((60*Math.pow(Math.sin(Math.PI*t),2)*Math.sin(Math.PI*t+0.1)+16)*10)/10; }),
+           min: gc.map(x=>{ let t=x/100; return Math.round((60*Math.pow(Math.sin(Math.PI*t),2)*Math.sin(Math.PI*t+0.1)+2)*10)/10; }) },
+    left:  gc.map(x=>{ let t=x/100; return Math.round((65*Math.pow(Math.sin(Math.PI*t),2)*Math.sin(Math.PI*t+0.08)+5)*10)/10; }),
+    right: gc.map(x=>{ let t=x/100; return Math.round((55*Math.pow(Math.sin(Math.PI*t),2)*Math.sin(Math.PI*t+0.12)+9)*10)/10; }),
+    risk:'med', riskNote:'Asymmetry detected'
+  },
+  {
+    id:'ankle', label:'Ankle', plane:'Sagittal plane',
+    norm:{ max: gc.map(x=>{ let t=x/100; return Math.round((12*Math.sin(2*Math.PI*t-1.2)+2)*10)/10; }),
+           min: gc.map(x=>{ let t=x/100; return Math.round((12*Math.sin(2*Math.PI*t-1.2)-8)*10)/10; }) },
+    left:  gc.map(x=>{ let t=x/100; return Math.round((10*Math.sin(2*Math.PI*t-1.3)-6)*10)/10; }),
+    right: gc.map(x=>{ let t=x/100; return Math.round((14*Math.sin(2*Math.PI*t-1.1)-10)*10)/10; }),
+    risk:'high', riskNote:'Reduced push-off ROM'
+  }
+];
+
+const riskCfg = {
+  low:  { cls:'risk-low',  icon:'✓', txt:'Low risk' },
+  med:  { cls:'risk-med',  icon:'~', txt:'Monitor' },
+  high: { cls:'risk-high', icon:'!', txt:'Flagged' }
+};
+
+const riskGrid = document.getElementById('riskGrid');
+joints.forEach(j=>{
+  const r = riskCfg[j.risk];
+  riskGrid.innerHTML += `<div class="risk-card ${r.cls}">
+    <div class="risk-joint">${j.label}</div>
+    <div class="risk-label">${r.icon} ${r.txt}</div>
+    <div class="risk-note">${j.riskNote}</div>
+  </div>`;
+});
+
+const chartInstances = {};
+let currentView = 'both';
+
+function buildCharts(view) {
+  const grid = document.getElementById('chartGrid');
+  grid.innerHTML = '';
+  Object.values(chartInstances).forEach(c => c.destroy());
+
+  joints.forEach(j => {
+    const card = document.createElement('div');
+    card.className = 'chart-card';
+    card.innerHTML = `
+      <div class="chart-title">${j.label}</div>
+      <div class="chart-sub">${j.plane} &middot; degrees (&deg;)</div>
+      <div class="chart-wrap"><canvas id="c_${j.id}" role="img" aria-label="${j.label} joint angle across gait cycle">${j.label} joint angle chart</canvas></div>
+      <div class="legend">
+        <div class="leg-item"><div class="leg-line" style="background:#378ADD;"></div>Left</div>
+        <div class="leg-item"><div class="leg-line" style="background:#D85A30;"></div>Right</div>
+        <div class="leg-item"><div class="leg-line" style="background:#bbb;"></div>Normative</div>
+      </div>`;
+    grid.appendChild(card);
+
+    const datasets = [
+      { label:'Norm max', data:j.norm.max, borderColor:'rgba(180,180,180,0.5)', backgroundColor:'rgba(200,200,200,0.15)', borderWidth:1, borderDash:[4,3], pointRadius:0, fill:'+1', tension:0.4 },
+      { label:'Norm min', data:j.norm.min, borderColor:'rgba(180,180,180,0.5)', backgroundColor:'rgba(200,200,200,0.15)', borderWidth:1, borderDash:[4,3], pointRadius:0, fill:false, tension:0.4 },
+    ];
+    if(view==='both'||view==='left')  datasets.push({ label:'Left',  data:j.left,  borderColor:'#378ADD', backgroundColor:'transparent', borderWidth:2.5, pointRadius:0, tension:0.4 });
+    if(view==='both'||view==='right') datasets.push({ label:'Right', data:j.right, borderColor:'#D85A30', backgroundColor:'transparent', borderWidth:2.5, pointRadius:0, borderDash:view==='both'?[6,3]:[], tension:0.4 });
+
+    chartInstances[j.id] = new Chart(document.getElementById('c_'+j.id), {
+      type:'line',
+      data:{ labels:gc, datasets },
+      options:{
+        responsive:true, maintainAspectRatio:false,
+        animation:{ duration:500 },
+        plugins:{ legend:{ display:false }, tooltip:{ mode:'index', intersect:false, callbacks:{
+          title: items=>`${items[0].label}% gait cycle`,
+          label: i=>` ${i.dataset.label}: ${i.raw}°`
+        }}},
+        scales:{
+          x:{ title:{ display:true, text:'Gait cycle (%)', font:{size:10}, color:'#999' }, ticks:{ maxTicksLimit:6, font:{size:10}, color:'#999', autoSkip:true }, grid:{ color:'rgba(0,0,0,0.05)' } },
+          y:{ title:{ display:true, text:'Angle (°)', font:{size:10}, color:'#999' }, ticks:{ font:{size:10}, color:'#999', maxTicksLimit:6 }, grid:{ color:'rgba(0,0,0,0.05)' } }
+        }
+      }
+    });
+  });
+}
+
+function buildStats() {
+  const grid = document.getElementById('statsGrid');
+  grid.innerHTML = '';
+  joints.forEach(j => {
+    const lMax=Math.round(Math.max(...j.left)), lMin=Math.round(Math.min(...j.left));
+    const rMax=Math.round(Math.max(...j.right)), rMin=Math.round(Math.min(...j.right));
+    const lROM=lMax-lMin, rROM=rMax-rMin;
+    grid.innerHTML += `<div class="stat-card">
+      <div class="stat-title">${j.label}</div>
+      <div class="stat-row">
+        <div class="stat-box"><div class="stat-box-label">Peak flex L</div><div class="stat-box-val">${lMax}°</div><div class="stat-box-side">Left</div></div>
+        <div class="stat-box"><div class="stat-box-label">Peak flex R</div><div class="stat-box-val">${rMax}°</div><div class="stat-box-side">Right</div></div>
+        <div class="stat-box"><div class="stat-box-label">ROM diff</div><div class="stat-box-val">${Math.abs(lROM-rROM)}°</div><div class="stat-box-side">L${lROM} R${rROM}</div></div>
+      </div>
+    </div>`;
+  });
+}
+
+function setView(v) {
+  currentView = v;
+  document.querySelectorAll('.tog-btn').forEach(b => {
+    b.classList.toggle('active', b.textContent.toLowerCase().includes(v==='both'?'both':v==='left'?'left':'right'));
+  });
+  buildCharts(v);
+}
+
+buildCharts('both');
+buildStats();
+</script>
+</body>
+</html>
